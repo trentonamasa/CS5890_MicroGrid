@@ -17,10 +17,10 @@ class State:
         self.__get_next_energy = get_energy_generated()
 
     def get_next_energy_gen(self):
-        self.curr_energy_gen = self.__get_next_energy()
+        self.curr_energy_gen = self.__get_next_energy(self.time)
 
     def get_next_system_load(self):
-        self.curr_load = self.__get_next_load
+        self.curr_load = self.__get_next_load()
     
     def increment_time(self):
         seconds_in_a_day = 86400
@@ -29,31 +29,33 @@ class State:
             self.time -= seconds_in_a_day
 
 def get_energy_generated():
-    df = pandas.read_csv(parameters.SOLAR_GENERATION_FILE_LOCATION)
-    index = 0
+    #df = pandas.read_csv(parameters.SOLAR_GENERATION_FILE_LOCATION)
+    row = 0
 
     def get_energy(time):
         begin_solar_gen_time = 39600
         end_solar_gen_time = 64800
+        scalar = 900
         if (time > begin_solar_gen_time and time < end_solar_gen_time):
-            return math.sin((time - begin_solar_gen_time) * math.pi / (end_solar_gen_time - begin_solar_gen_time))
+            return math.sin((time - begin_solar_gen_time) * math.pi / (end_solar_gen_time - begin_solar_gen_time)) * scalar
         return 0
     '''def get_energy():
-        nonlocal index
-        energy_generated = df[index, parameters.ENERGY_COL_INDEX]
-        index += 1
+        nonlocal row
+        energy_generated = df.iloc[row, parameters.ENERGY_COL_INDEX]
+        row += 1
         return energy_generated'''
     
     return get_energy
 
 def get_system_load():
-    df = pandas.read_csv(parameters.HOME_ENERGY_FILE_LOCATION)
-    index = 0
+    df = pandas.read_csv(parameters.HOME_ENERGY_FILE_LOCATION, header=None)
+    row = 0
 
     def get_load():
-        nonlocal index
-        energy_generated = df[index, parameters.LOAD_COL_INDEX]
-        index += 1
+        nonlocal row
+        energy_generated = df.iloc[row, parameters.LOAD_COL_INDEX]
+        row += 1
+        row %= 1000
         return energy_generated
     
     return get_load
@@ -64,37 +66,32 @@ def get_battery_wear(delta_energy):
 def get_reward(State): # Finish this on Monday.
     return 0
 
-def simulator():
-    get_energy = get_energy_generated()
-    get_load = get_system_load()
-
-    def time_step(state, action):
-        state.increment_time()
-        cur_energy = get_energy(state.time)
-        cur_load = get_load()
-        if (action > 0):
-            x=1
-            # Charge the battery
-            # Check if we need to buy to charge the battery
-                # Increment max_load
-                # Decrement net_gain
-            # else if we have excess
-                # Increment net_gain
-        else:
-            x = 1
-            # Discharge the battery
-            # Check if we need to sell any energy
-                # Increment net_gain
-            # else if we need to buy energy
-                # Update max_load
-                # Decrement net_gain
-
-    return time_step
+def simulate_time_step(state, action):
+    if (action > 0):
+        x=1
+        # Charge the battery
+        # Check if we need to buy to charge the battery
+            # Increment max_load
+            # Decrement net_gain
+        # else if we have excess
+            # Increment net_gain
+    else:
+        x = 1
+        # Discharge the battery
+        # Check if we need to sell any energy
+            # Increment net_gain
+        # else if we need to buy energy
+            # Update max_load
+            # Decrement net_gain
+    state.increment_time()
+    state.get_next_energy_gen()
+    state.get_next_system_load()
 
 if __name__ == "__main__":
     cur_state = State()
     cur_action = 3
-    my_simulator = simulator()
-    print(cur_state.time)
-    my_simulator(cur_state, cur_action)
-    print(cur_state.time)
+    print("Time: ",cur_state.time,"  Energy: ",cur_state.curr_energy_gen,"   Load: ",cur_state.curr_load)
+    for i in range(5760):
+        simulate_time_step(cur_state, cur_action)
+        if (cur_state.curr_load > 0):
+            print("Time: ",cur_state.time,"  Energy: ",cur_state.curr_energy_gen,"   Load: ",cur_state.curr_load)
