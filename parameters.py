@@ -11,4 +11,7 @@ PEAK_TIME_COST = 1
 COST = 1
 PEAK_TIME_SELL = 1
 SELL = 1
+# Battery limits
+MAX_DISCHARGE = -10
+MAX_CHARGE = 10
 # TODO Max load parameters
