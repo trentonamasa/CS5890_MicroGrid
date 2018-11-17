@@ -10,8 +10,17 @@ class State:
         self.date = datetime.datetime(2018, 1, 1)
         self.battery_charge = 0
         self.net_gain = 0
-        self.__get_n
         # self.max_load = 0
+        self.curr_load = 0
+        self.__get_next_load = get_system_load()
+        self.curr_energy_gen = 0
+        self.__get_next_energy = get_energy_generated()
+
+    def get_next_energy_gen(self):
+        self.curr_energy_gen = self.__get_next_energy()
+
+    def get_next_system_load(self):
+        self.curr_load = self.__get_next_load
     
     def increment_time(self):
         seconds_in_a_day = 86400
@@ -48,6 +57,12 @@ def get_system_load():
         return energy_generated
     
     return get_load
+
+def get_battery_wear(delta_energy):
+    return delta_energy**2 # temp function until Select sends the real one.
+
+def get_reward(State): # Finish this on Monday.
+    return 0
 
 def simulator():
     get_energy = get_energy_generated()
