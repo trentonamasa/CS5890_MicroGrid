@@ -14,4 +14,5 @@ SELL = 1
 # Battery limits
 MAX_DISCHARGE = -10
 MAX_CHARGE = 10
+MAX_BATTERY_CAPACITY = 14000 #Wh
 # TODO Max load parameters
