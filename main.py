@@ -60,19 +60,46 @@ def get_system_load():
         return energy_generated
     
     return get_load
-
 def get_battery_wear(delta_energy):
     return delta_energy**2 # temp function until Select sends the real one.
 
 def get_reward(State): # Finish this on Monday.
     return 0
 
-def compute_max_expected_reward():
-    year = 365
-    max_time_step = 86400
-    for day in range(year):
-        for time_step in range(0, max_time_step, parameters.TIME_STEP):
-            # Find the Value iteration of each state
+def initialize_v_table():
+    v_table = []
+    # Initialize v_table
+    for time_step_bin in range(parameters.NUM_TIME_STEP_BINS):
+        v_table.append([])
+        for battery_bin in range(parameters.NUM_BATTERY_CAPACITY_BINS):
+            v_table[time_step_bin].append(0)
+    
+    state = State()
+    state.time = parameters.TIME_STEP * (parameters.NUM_TIME_STEP_BINS - 1)
+    state.cur_load = 50 # TODO not sure what to put here so I just put 50... probably should look into this a bit more. Maybe there's someway we can use the get_next_system_load?
+    state.get_next_energy_gen
+    # Fill in final column of v_table
+    for battery_level in range(parameters.NUM_BATTERY_CAPACITY_BINS):
+        v_table[parameters.NUM_TIME_STEP_BINS - 1][battery_level] = get_reward(state)
+    
+    # Fill v_table
+    delta = float("inf")
+    while delta > parameters.MIN_ACCEPTABLE_DELTA:
+        delta = 0
+        state.time = 0
+        for cur_time in range(parameters.NUM_TIME_STEP_BINS - 1, -1 , -1):
+            # update state.cur_load; maybe using get_next_system_load?
+            state.get_next_energy_gen
+            for cur_battery_level in range(parameters.NUM_BATTERY_CAPACITY_BINS):
+                v = v_table[cur_time][cur_battery_level]
+                best = float("-inf")
+                for delta_battery_level in range(-cur_battery_level, parameters.MAX_BATTERY_CAPACITY - cur_battery_level):
+                    state.battery_charge = cur_battery_level + delta_battery_level
+                    best = max(best, get_reward(state) + v_table[cur_time + 1][cur_battery_level + delta_battery_level])
+                delta = max(delta, abs(v - best))
+                v_table[cur_time][cur_battery_level] = best
+    
+    return v_table
 
 def simulate_time_step(state, action):
     if (action > 0):
