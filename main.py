@@ -22,21 +22,31 @@ class State:
 
     def get_next_system_load(self):
         self.cur_load = self.__get_next_load()
+
+    def change_battery_level(self, delta_energy):
+        self.battery_charge += delta_energy
+        flux = 0
+        if self.battery_charge > parameters.MAX_BATTERY_CAPACITY:
+            flux = self.battery_charge - parameters.MAX_BATTERY_CAPACITY
+            self.battery_charge = parameters.MAX_BATTERY_CAPACITY
+        elif self.battery_charge < 0:
+            flux = self.battery_charge
+            self.battery_charge = 0
+        return flux
     
     def increment_time(self):
-        seconds_in_a_day = 86400
         self.time += parameters.TIME_STEP
-        if (self.time > seconds_in_a_day):
-            self.time -= seconds_in_a_day
+        if (self.time > parameters.TIME_STEP * parameters.NUM_TIME_STEP_BINS):
+            self.time -= parameters.TIME_STEP * parameters.NUM_TIME_STEP_BINS
 
 def get_energy_generated():
     #df = pandas.read_csv(parameters.SOLAR_GENERATION_FILE_LOCATION)
     row = 0
 
     def get_energy(time):
-        begin_solar_gen_time = 39600
-        end_solar_gen_time = 64800
-        scalar = 900
+        begin_solar_gen_time = 11
+        end_solar_gen_time = 18
+        scalar = 9000
         if (time > begin_solar_gen_time and time < end_solar_gen_time):
             return math.sin((time - begin_solar_gen_time) * math.pi / (end_solar_gen_time - begin_solar_gen_time)) * scalar
         return 0
@@ -76,8 +86,8 @@ def initialize_v_table():
     
     state = State()
     state.time = parameters.TIME_STEP * (parameters.NUM_TIME_STEP_BINS - 1)
-    state.cur_load = 50 # TODO not sure what to put here so I just put 50... probably should look into this a bit more. Maybe there's someway we can use the get_next_system_load?
-    state.get_next_energy_gen
+    state.get_next_system_load()
+    state.get_next_energy_gen()
     # Fill in final column of v_table
     for battery_level in range(parameters.NUM_BATTERY_CAPACITY_BINS):
         v_table[parameters.NUM_TIME_STEP_BINS - 1][battery_level] = get_reward(state)
@@ -89,7 +99,7 @@ def initialize_v_table():
         state.time = 0
         for cur_time in range(parameters.NUM_TIME_STEP_BINS - 1, -1 , -1):
             # update state.cur_load; maybe using get_next_system_load?
-            state.get_next_energy_gen
+            state.get_next_energy_gen()
             for cur_battery_level in range(parameters.NUM_BATTERY_CAPACITY_BINS):
                 v = v_table[cur_time][cur_battery_level]
                 best = float("-inf")
