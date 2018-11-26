@@ -60,10 +60,11 @@ def get_system_load():
         return energy_generated
     
     return get_load
-def get_battery_wear(delta_energy):
-    return delta_energy**2 # temp function until Select sends the real one.
 
-def get_reward(State): # Finish this on Monday.
+def get_battery_wear(delta_energy):
+    return delta_energy**2 # TODO Replace this function with the real one from Select
+
+def get_reward(State): # TODO Finish this.
     return 0
 
 def initialize_v_table():
@@ -101,11 +102,14 @@ def initialize_v_table():
     
     return v_table
 
+def cost_at_time(self):
+    if self.cur_time > parameters.PEAK_TIME_BEGIN or self.cur_time < 
+
 def simulate_time_step(state, action):
-    if (action > 0):
-        x=1
+    flux = change_battery_level(action)
+    if (flux > 0):
+        
         # Charge the battery
-        state.battery_charge += state.cur_energy_gen
         # Check if we need to buy to charge the battery
             # Increment max_load
             # Decrement net_gain
