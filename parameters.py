@@ -8,8 +8,8 @@ TIME_STEP = 1
 PEAK_TIME_BEGIN = 5
 PEAK_TIME_END = 9
 # Cost in ____
-PEAK_TIME_COST = 1
-COST = 1
+PEAK_TIME_COST = -1
+COST = -1
 PEAK_TIME_SELL = 1
 SELL = 1
 # Battery limits

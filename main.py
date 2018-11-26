@@ -112,13 +112,21 @@ def initialize_v_table():
     
     return v_table
 
-def cost_at_time(self):
-    if self.cur_time > parameters.PEAK_TIME_BEGIN or self.cur_time < 
+def gain_changer(state, flux):
+    if state.cur_time < parameters.PEAK_TIME_BEGIN and state.cur_time < parameters.PEAK_TIME_END:
+        if flux < 0: return abs(flux)*parameters.PEAK_TIME_COST
+        else: return abs(flux)*parameters.PEAK_TIME_SELL
+    else:
+        if flux < 0: return abs(flux)*parameters.COST
+        else: return abs(flux)*parameters.SELL
+    
 
 def simulate_time_step(state, action):
-    flux = change_battery_level(action)
+    flux = state.change_battery_level(action)
+    state.net_gain = gain_changer(state, flux) + get_battery_wear(action-flux)
+
     if (flux > 0):
-        
+        x = 1
         # Charge the battery
         # Check if we need to buy to charge the battery
             # Increment max_load
