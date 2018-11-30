@@ -23,16 +23,20 @@ class State:
     def get_next_system_load(self):
         self.cur_load = self.__get_next_load()
 
+    def get_difference_battery_level(self, delta_energy):
+        flux = 0
+        if self.battery_charge + delta_energy > parameters.MAX_BATTERY_CAPACITY:
+            flux = self.battery_charge - parameters.MAX_BATTERY_CAPACITY
+        elif self.battery_charge + delta_energy < 0:
+            flux = self.battery_charge
+        return flux
+
     def change_battery_level(self, delta_energy):
         self.battery_charge += delta_energy
-        flux = 0
         if self.battery_charge > parameters.MAX_BATTERY_CAPACITY:
-            flux = self.battery_charge - parameters.MAX_BATTERY_CAPACITY
             self.battery_charge = parameters.MAX_BATTERY_CAPACITY
         elif self.battery_charge < 0:
-            flux = self.battery_charge
             self.battery_charge = 0
-        return flux
     
     def increment_time(self):
         self.time += parameters.TIME_STEP
@@ -74,8 +78,8 @@ def get_system_load():
 def get_battery_wear(delta_energy):
     return delta_energy**2 # TODO Replace this function with the real one from Select
 
-def get_reward(State): # TODO Finish this.
-    return 0
+def get_reward(state, action): # TODO Finish this.
+    return gain_changer(state, state.get_difference_battery_level(action)) + get_battery_wear(action - state.get_difference_battery_level(action))
 
 def initialize_v_table():
     v_table = []
@@ -91,7 +95,7 @@ def initialize_v_table():
     state.get_next_energy_gen()
     # Fill in final column of v_table
     for battery_level in range(parameters.NUM_BATTERY_CAPACITY_BINS):
-        v_table[parameters.NUM_TIME_STEP_BINS - 1][battery_level] = get_reward(state)
+        v_table[parameters.NUM_TIME_STEP_BINS - 1][battery_level] = gain_changer(state, battery_level)
     
     # Fill v_table
     delta = float("inf")
@@ -99,31 +103,32 @@ def initialize_v_table():
         delta = 0
         state.time = 0
         for cur_time in range(parameters.NUM_TIME_STEP_BINS - 1, -1 , -1):
-            # update state.cur_load; maybe using get_next_system_load?
+            state.get_next_system_load()
             state.get_next_energy_gen()
             for cur_battery_level in range(parameters.NUM_BATTERY_CAPACITY_BINS):
                 v = v_table[cur_time][cur_battery_level]
                 best = float("-inf")
                 for delta_battery_level in range(-cur_battery_level, parameters.MAX_BATTERY_CAPACITY - cur_battery_level):
                     state.battery_charge = cur_battery_level + delta_battery_level
-                    best = max(best, get_reward(state) + v_table[cur_time + 1][cur_battery_level + delta_battery_level])
+                    best = max(best, get_reward(state, delta_battery_level) + v_table[cur_time + 1][cur_battery_level + delta_battery_level])
                 delta = max(delta, abs(v - best))
                 v_table[cur_time][cur_battery_level] = best
     
     return v_table
 
 def gain_changer(state, flux):
-    if state.cur_time < parameters.PEAK_TIME_BEGIN and state.cur_time < parameters.PEAK_TIME_END:
+    if state.time < parameters.PEAK_TIME_BEGIN and state.time < parameters.PEAK_TIME_END:
         if flux < 0: return abs(flux)*parameters.PEAK_TIME_COST
         else: return abs(flux)*parameters.PEAK_TIME_SELL
     else:
         if flux < 0: return abs(flux)*parameters.COST
         else: return abs(flux)*parameters.SELL
-    
 
 def simulate_time_step(state, action):
-    flux = state.change_battery_level(action)
-    state.net_gain = gain_changer(state, flux) + get_battery_wear(action-flux)
+    flux = state.get_difference_battery_level(action)
+    state.change_battery_level(action)
+    state.net_gain += gain_changer(state, flux) + get_battery_wear(action-flux)
+
 
     if (flux > 0):
         x = 1
@@ -136,7 +141,6 @@ def simulate_time_step(state, action):
     else:
         x = 1        
         # Discharge the battery
-        state.battery_charge -= state.cur_load
         # Check if we need to sell any energy
             # Increment net_gain
         # else if we need to buy energy
@@ -145,6 +149,7 @@ def simulate_time_step(state, action):
     state.increment_time()
     state.get_next_energy_gen()
     state.get_next_system_load()
+
 
 if __name__ == "__main__":
     cur_state = State()
