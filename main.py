@@ -94,14 +94,15 @@ def gain_changer(state, flux):
 def arg_max(state, v_table):
     for cur_battery_level in range(parameters.NUM_BATTERY_CAPACITY_BINS):
         best = float("-inf")
-        for delta_battery_level in range(-cur_battery_level, parameters.NUM_BATTERY_CAPACITY_BINS - 1 - cur_battery_level):
+        for delta_battery_level in range(-cur_battery_level, parameters.NUM_BATTERY_CAPACITY_BINS - cur_battery_level):
             state.battery_charge = cur_battery_level + delta_battery_level
-            if best < (get_reward(state, delta_battery_level) + v_table[state.time + 1][cur_battery_level + delta_battery_level]):
-                best = get_reward(state, delta_battery_level) + v_table[state.time + 1][cur_battery_level + delta_battery_level]
-                best_delta_energy = delta_battery_level
+            cur_score = get_reward(state, delta_battery_level) + v_table[state.time + 1][cur_battery_level + delta_battery_level]
+            if best < cur_score:
+                best = cur_score
+                action = delta_battery_level
         
-    action = best_delta_energy
     return action
+
 
 def initialize_v_table():
     v_table = []
@@ -132,7 +133,7 @@ def initialize_v_table():
                 v = v_table[cur_time_bin][cur_battery_level]
                 best = float("-inf")
                 for delta_battery_level in range(-cur_battery_level, parameters.NUM_BATTERY_CAPACITY_BINS - cur_battery_level):
-                    print("Action:", delta_battery_level, " Battery Level:", cur_battery_level," Max Capacity:", parameters.MAX_BATTERY_CAPACITY)
+                    # print("Action:", delta_battery_level, " Battery Level:", cur_battery_level," Max Capacity:", parameters.MAX_BATTERY_CAPACITY)
                     state.battery_charge = cur_battery_level + delta_battery_level
                     best = max(best, get_reward(state, delta_battery_level) + v_table[cur_time_bin + 1][cur_battery_level + delta_battery_level])
                 delta = max(delta, abs(v - best))
@@ -155,6 +156,7 @@ if __name__ == "__main__":
     cur_state = State()
     cur_action = 3
     v_table = initialize_v_table()
+    print('done with v_table')
 
     times = []
     energy_gens = []
