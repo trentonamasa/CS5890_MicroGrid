@@ -92,7 +92,15 @@ def gain_changer(state, flux):
         else: return abs(flux)*parameters.SELL
 
 def arg_max(state, v_table):
-    action = 3
+    for cur_battery_level in range(parameters.NUM_BATTERY_CAPACITY_BINS):
+        best = float("-inf")
+        for delta_battery_level in range(-cur_battery_level, parameters.NUM_BATTERY_CAPACITY_BINS - 1 - cur_battery_level):
+            state.battery_charge = cur_battery_level + delta_battery_level
+            if best < (get_reward(state, delta_battery_level) + v_table[state.time + 1][cur_battery_level + delta_battery_level]):
+                best = get_reward(state, delta_battery_level) + v_table[state.time + 1][cur_battery_level + delta_battery_level]
+                best_delta_energy = delta_battery_level
+        
+    action = best_delta_energy
     return action
 
 def initialize_v_table():
