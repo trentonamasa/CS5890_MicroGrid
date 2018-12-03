@@ -3,6 +3,7 @@ import parameters
 from enum import Enum
 import pandas
 import math
+import matplotlib.pyplot as plt
 
 class State:
     def __init__(self):
@@ -127,7 +128,7 @@ def gain_changer(state, flux):
 def simulate_time_step(state, action):
     flux = state.get_difference_battery_level(action)
     state.change_battery_level(action)
-    state.net_gain += gain_changer(state, flux) + get_battery_wear(action-flux)
+    state.net_gain += gain_changer(state, flux) + get_battery_wear(action - flux)
 
 
     if (flux > 0):
@@ -152,10 +153,36 @@ def simulate_time_step(state, action):
 
 
 if __name__ == "__main__":
+
     cur_state = State()
     cur_action = 3
-    print("Time: ",cur_state.time,"  Energy: ",cur_state.cur_energy_gen,"   Load: ", cur_state.cur_load,"  Charge in Battery: ", cur_state.battery_charge)
+
+    times = []
+    energy_gens = []
+    loads = []
+    battery_charges = []
+    gains = []
+
+    times.append(cur_state.time)
+    energy_gens.append(cur_state.cur_energy_gen)
+    loads.append(cur_state.cur_load)
+    battery_charges.append(cur_state.battery_charge)
+    gains.append(cur_state.net_gain)
+    # print("Time: ",cur_state.time,"  Energy: ",cur_state.cur_energy_gen,"   Load: ", cur_state.cur_load,"  Charge in Battery: ", cur_state.battery_charge)
+    
     for i in range(5760):
         simulate_time_step(cur_state, cur_action)
         if (cur_state.cur_load > 0):
-            print("Time: ",cur_state.time,"  Energy: ",cur_state.cur_energy_gen,"   Load: ",cur_state.cur_load,"  Charge in Battery: ", cur_state.battery_charge)
+            times.append(cur_state.time)
+            energy_gens.append(cur_state.cur_energy_gen)
+            loads.append(cur_state.cur_load)
+            battery_charges.append(cur_state.battery_charge)
+            gains.append(cur_state.net_gain)
+            # print("Time: ",cur_state.time,"  Energy: ",cur_state.cur_energy_gen,"   Load: ",cur_state.cur_load,"  Charge in Battery: ", cur_state.battery_charge)
+   
+    plt.plot(energy_gens, label = 'energy_gen')
+    plt.plot(loads, label = 'loads')
+    plt.plot(battery_charges, label = 'battery_charge')
+    plt.plot(gains, label = 'gain')
+    plt.legend()
+    plt.show()        
