@@ -82,6 +82,19 @@ def get_battery_wear(delta_energy):
 def get_reward(state, action): # TODO Finish this.
     return gain_changer(state, state.get_difference_battery_level(action)) + get_battery_wear(action - state.get_difference_battery_level(action))
 
+def gain_changer(state, flux):
+    flux += state.cur_energy_gen - state.cur_load
+    if state.time < parameters.PEAK_TIME_BEGIN and state.time < parameters.PEAK_TIME_END:
+        if flux < 0: return abs(flux)*parameters.PEAK_TIME_COST
+        else: return abs(flux)*parameters.PEAK_TIME_SELL
+    else:
+        if flux < 0: return abs(flux)*parameters.COST
+        else: return abs(flux)*parameters.SELL
+
+def arg_max(state, v_table):
+    action = 3
+    return action
+
 def initialize_v_table():
     v_table = []
     # Initialize v_table
@@ -117,15 +130,6 @@ def initialize_v_table():
     
     return v_table
 
-def gain_changer(state, flux):
-    flux += state.cur_energy_gen - state.cur_load
-    if state.time < parameters.PEAK_TIME_BEGIN and state.time < parameters.PEAK_TIME_END:
-        if flux < 0: return abs(flux)*parameters.PEAK_TIME_COST
-        else: return abs(flux)*parameters.PEAK_TIME_SELL
-    else:
-        if flux < 0: return abs(flux)*parameters.COST
-        else: return abs(flux)*parameters.SELL
-
 def simulate_time_step(state, action):
     flux = state.get_difference_battery_level(action)
     state.change_battery_level(action)
@@ -137,11 +141,10 @@ def simulate_time_step(state, action):
     state.get_next_energy_gen()
     state.get_next_system_load()
 
-
 if __name__ == "__main__":
-
     cur_state = State()
     cur_action = 3
+    v_table = initialize_v_table()
 
     times = []
     energy_gens = []
@@ -158,13 +161,15 @@ if __name__ == "__main__":
     
     for i in range(72):
         simulate_time_step(cur_state, cur_action)
+        cur_action = arg_max(cur_state, v_table)
+
         if (cur_state.cur_load > 0):
             times.append(cur_state.time)
             energy_gens.append(cur_state.cur_energy_gen)
             loads.append(cur_state.cur_load)
             battery_charges.append(cur_state.battery_charge)
             gains.append(cur_state.net_gain)
-            # print("Time: ",cur_state.time,"  Energy: ",cur_state.cur_energy_gen,"   Load: ",cur_state.cur_load,"  Charge in Battery: ", cur_state.battery_charge)
+            # print("Time: ", cur_state.time, "  Energy: ", cur_state.cur_energy_gen, "   Load: ", cur_state.cur_load, "  Charge in Battery: ", cur_state.battery_charge)
    
     plt.plot(energy_gens, label = 'Energy gen')
     plt.plot(loads, label = 'Load')
