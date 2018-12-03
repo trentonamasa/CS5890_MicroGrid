@@ -117,20 +117,22 @@ def initialize_v_table():
     state.get_next_energy_gen()
     # Fill in final column of v_table
     for battery_level in range(parameters.NUM_BATTERY_CAPACITY_BINS):
+        # print("Battery Level Bins:",battery_level)
         v_table[parameters.NUM_TIME_STEP_BINS - 1][battery_level] = gain_changer(state, battery_level)
     
     # Fill v_table
     delta = float("inf")
     while delta > parameters.MIN_ACCEPTABLE_DELTA:
         delta = 0
-        for cur_time_bin in range(parameters.NUM_TIME_STEP_BINS - 1, -1 , -1):
+        for cur_time_bin in range(parameters.NUM_TIME_STEP_BINS - 2, -1 , -1):
             state.time = cur_time_bin * parameters.TIME_STEP
             state.get_next_system_load()
             state.get_next_energy_gen()
             for cur_battery_level in range(parameters.NUM_BATTERY_CAPACITY_BINS):
                 v = v_table[cur_time_bin][cur_battery_level]
                 best = float("-inf")
-                for delta_battery_level in range(-cur_battery_level, parameters.MAX_BATTERY_CAPACITY - cur_battery_level):
+                for delta_battery_level in range(-cur_battery_level, parameters.NUM_BATTERY_CAPACITY_BINS - cur_battery_level):
+                    print("Action:", delta_battery_level, " Battery Level:", cur_battery_level," Max Capacity:", parameters.MAX_BATTERY_CAPACITY)
                     state.battery_charge = cur_battery_level + delta_battery_level
                     best = max(best, get_reward(state, delta_battery_level) + v_table[cur_time_bin + 1][cur_battery_level + delta_battery_level])
                 delta = max(delta, abs(v - best))
