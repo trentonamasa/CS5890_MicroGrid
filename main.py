@@ -85,7 +85,7 @@ def get_system_load(is_v_table_initializer = False):
 def get_battery_wear(delta_energy):
     return -abs(delta_energy**2) # TODO Replace this function with the real one from Select
 
-def get_reward(state, action): # TODO Finish this.
+def get_reward(state, action):
     return gain_changer(state, state.get_difference_battery_level(action)) + get_battery_wear(action - state.get_difference_battery_level(action))
 
 def gain_changer(state, flux):
@@ -98,16 +98,15 @@ def gain_changer(state, flux):
         else: return abs(flux)*parameters.SELL
 
 def arg_max(state, v_table):
-    for cur_battery_level in range(parameters.NUM_BATTERY_CAPACITY_BINS):
-        best = float("-inf")
-        for delta_battery_level in range(-cur_battery_level, parameters.NUM_BATTERY_CAPACITY_BINS - cur_battery_level):
-            state.battery_charge = (cur_battery_level + delta_battery_level) * BATTERY_SCALAR
-            cur_score = get_reward(state, delta_battery_level * BATTERY_SCALAR) + v_table[(state.time + 1) % parameters.NUM_TIME_STEP_BINS][cur_battery_level + delta_battery_level]
-            if best < cur_score:
-                best = cur_score
-                action = delta_battery_level
+    cur_battery_level = int(state.battery_charge / BATTERY_SCALAR)
+    best = float("-inf")
+    for delta_battery_level in range(-cur_battery_level, parameters.NUM_BATTERY_CAPACITY_BINS - cur_battery_level):
+        cur_score = v_table[(state.time + 1) % parameters.NUM_TIME_STEP_BINS][cur_battery_level + delta_battery_level]
+        if best < cur_score:
+            best = cur_score
+            action = delta_battery_level
         
-    return action
+    return action * BATTERY_SCALAR
 
 
 def initialize_v_table():
@@ -167,11 +166,15 @@ def simulate_time_step(state, action):
     state.get_next_system_load()
 
 if __name__ == "__main__":
-    cur_state = State()
+    cur_state = State(True)
     cur_action = 3
     print("I am printing something")
     v_table = initialize_v_table()
     print('done with v_table')
+
+    for i, time_bin in enumerate(v_table):
+        print(i)
+        print(time_bin)
 
     times = []
     energy_gens = []
@@ -201,7 +204,7 @@ if __name__ == "__main__":
     plt.plot(energy_gens, label = 'Energy gen')
     plt.plot(loads, label = 'Load')
     plt.plot(battery_charges, label = 'Battery charge')
-    plt.plot(gains, label = 'Net gain/loss')
+    #plt.plot(gains, label = 'Net gain/loss')
     plt.ylabel("Watt")
     plt.xlabel("Hours")
     plt.legend()
