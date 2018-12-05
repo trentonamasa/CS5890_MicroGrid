@@ -5,15 +5,17 @@ import pandas
 import math
 import matplotlib.pyplot as plt
 
+BATTERY_SCALAR = parameters.MAX_BATTERY_CAPACITY / parameters.NUM_BATTERY_CAPACITY_BINS
+
 class State:
-    def __init__(self):
+    def __init__(self, is_v_table_initializer = False):
         self.time = 0
         self.date = 0
         self.battery_charge = 0
         self.net_gain = 0
         # self.max_load = 0
         self.cur_load = 0
-        self.__get_next_load = get_system_load()
+        self.__get_next_load = get_system_load(is_v_table_initializer)
         self.cur_energy_gen = 0
         self.__get_next_energy = get_energy_generated()
         self.max_battery_capacity = parameters.MAX_BATTERY_CAPACITY
@@ -63,8 +65,11 @@ def get_energy_generated():
     
     return get_energy
 
-def get_system_load():
-    df = pandas.read_csv(parameters.HOME_ENERGY_FILE_LOCATION, header=None)
+def get_system_load(is_v_table_initializer = False):
+    if is_v_table_initializer:
+        df = pandas.read_csv(parameters.LOAD_V_TABLE_INITIALIZER_FILE_LOCATION, header=None)
+    else:
+        df = pandas.read_csv(parameters.HOME_ENERGY_FILE_LOCATION, header=None)
     row = 0
 
     def get_load():
@@ -112,14 +117,18 @@ def initialize_v_table():
         for battery_bin in range(parameters.NUM_BATTERY_CAPACITY_BINS):
             v_table[time_step_bin].append(0)
     
-    state = State()
+    is_v_table_initializer = True
+    state = State(is_v_table_initializer)
     state.time = parameters.TIME_STEP * (parameters.NUM_TIME_STEP_BINS - 1)
     state.get_next_system_load()
     state.get_next_energy_gen()
+    state.cur_energy_gen = 0
+    state.cur_load = 0
     # Fill in final column of v_table
     for battery_level in range(parameters.NUM_BATTERY_CAPACITY_BINS):
-        # print("Battery Level Bins:",battery_level)
-        v_table[parameters.NUM_TIME_STEP_BINS - 1][battery_level] = gain_changer(state, battery_level)
+        print("Battery Level Bins:",battery_level * BATTERY_SCALAR)
+        v_table[parameters.NUM_TIME_STEP_BINS - 1][battery_level] = gain_changer(state, battery_level * BATTERY_SCALAR)
+    print(v_table[parameters.NUM_TIME_STEP_BINS-1])
     
     # Fill v_table
     delta = float("inf")
@@ -136,8 +145,10 @@ def initialize_v_table():
                     # print("Action:", delta_battery_level, " Battery Level:", cur_battery_level," Max Capacity:", parameters.MAX_BATTERY_CAPACITY)
                     state.battery_charge = cur_battery_level + delta_battery_level
                     best = max(best, get_reward(state, delta_battery_level) + v_table[cur_time_bin + 1][cur_battery_level + delta_battery_level])
+                #print("v:",v,"   best:",best,"   v - best =",v-best)
                 delta = max(delta, abs(v - best))
                 v_table[cur_time_bin][cur_battery_level] = best
+        print(delta)
     
     return v_table
 
@@ -155,6 +166,7 @@ def simulate_time_step(state, action):
 if __name__ == "__main__":
     cur_state = State()
     cur_action = 3
+    print("I am printing something")
     v_table = initialize_v_table()
     print('done with v_table')
 
