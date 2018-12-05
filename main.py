@@ -193,13 +193,11 @@ if __name__ == "__main__":
         simulate_time_step(cur_state, cur_action)
         cur_action = arg_max(cur_state, v_table)
 
-        if (cur_state.cur_load > 0):
-            times.append(cur_state.time)
-            energy_gens.append(cur_state.cur_energy_gen)
-            loads.append(cur_state.cur_load)
-            battery_charges.append(cur_state.battery_charge)
-            gains.append(cur_state.net_gain)
-            # print("Time: ", cur_state.time, "  Energy: ", cur_state.cur_energy_gen, "   Load: ", cur_state.cur_load, "  Charge in Battery: ", cur_state.battery_charge)
+        times.append(cur_state.time)
+        energy_gens.append(cur_state.cur_energy_gen)
+        loads.append(cur_state.cur_load)
+        battery_charges.append(cur_state.battery_charge)
+        gains.append(cur_state.net_gain)
    
     plt.plot(energy_gens, label = 'Energy gen')
     plt.plot(loads, label = 'Load')
