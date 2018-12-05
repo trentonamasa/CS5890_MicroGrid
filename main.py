@@ -7,6 +7,11 @@ import matplotlib.pyplot as plt
 
 BATTERY_SCALAR = parameters.MAX_BATTERY_CAPACITY / parameters.NUM_BATTERY_CAPACITY_BINS
 
+class Buy_Sell_Amount:
+    def __init__(self):
+        self.amount_to_buy = 0
+        self.amount_to_sell = 0
+
 class State:
     def __init__(self, is_v_table_initializer = False):
         self.time = 0
@@ -19,6 +24,8 @@ class State:
         self.cur_energy_gen = 0
         self.__get_next_energy = get_energy_generated()
         self.max_battery_capacity = parameters.MAX_BATTERY_CAPACITY
+        self.get_next_energy_gen()
+        self.get_next_system_load()
 
     def get_next_energy_gen(self):
         self.cur_energy_gen = self.__get_next_energy(self.time)
@@ -27,12 +34,13 @@ class State:
         self.cur_load = self.__get_next_load(row)
 
     def get_difference_battery_level(self, delta_energy):
-        flux = 0
-        if self.battery_charge + delta_energy > parameters.MAX_BATTERY_CAPACITY:
-            flux = self.battery_charge - parameters.MAX_BATTERY_CAPACITY
-        elif self.battery_charge + delta_energy < 0:
-            flux = self.battery_charge
-        return flux
+        buy_sell = Buy_Sell_Amount()
+        total_energy = self.battery_charge + delta_energy
+        if total_energy > parameters.MAX_BATTERY_CAPACITY:
+            buy_sell.amount_to_sell = total_energy - parameters.MAX_BATTERY_CAPACITY
+        elif total_energy < 0:
+            buy_sell.amount_to_buy = abs(total_energy)
+        return buy_sell
 
     def change_battery_level(self, delta_energy):
         self.battery_charge += delta_energy
@@ -83,25 +91,30 @@ def get_system_load(is_v_table_initializer = False):
     return get_load
 
 def get_battery_wear(delta_energy):
-    return -abs(delta_energy**2) # TODO Replace this function with the real one from Select
+    return -abs((delta_energy/BATTERY_SCALAR)**2) # TODO Replace this function with the real one from Select
 
 def get_reward(state, action):
-    return gain_changer(state, state.get_difference_battery_level(action)) + get_battery_wear(action - state.get_difference_battery_level(action))
+    buy_sell = state.get_difference_battery_level(action)
+    return gain_changer(state, action) + get_battery_wear(action - buy_sell.amount_to_buy - buy_sell.amount_to_sell)
 
-def gain_changer(state, flux):
-    flux += state.cur_energy_gen - state.cur_load
-    if state.time < parameters.PEAK_TIME_BEGIN and state.time < parameters.PEAK_TIME_END:
-        if flux < 0: return abs(flux)*parameters.PEAK_TIME_COST
-        else: return abs(flux)*parameters.PEAK_TIME_SELL
+def gain_changer(state, action):
+    buy_sell = Buy_Sell_Amount()
+    energy_difference = -action - state.cur_load + state.cur_energy_gen
+    if energy_difference < 0:
+        buy_sell.amount_to_buy = abs(energy_difference)
     else:
-        if flux < 0: return abs(flux)*parameters.COST
-        else: return abs(flux)*parameters.SELL
+        buy_sell.amount_to_sell = abs(energy_difference)
+
+    if state.time > parameters.PEAK_TIME_BEGIN and state.time < parameters.PEAK_TIME_END:
+        return buy_sell.amount_to_buy * parameters.PEAK_TIME_COST + buy_sell.amount_to_sell * parameters.PEAK_TIME_SELL
+    else:
+        return buy_sell.amount_to_buy * parameters.COST + buy_sell.amount_to_sell * parameters.SELL
 
 def arg_max(state, v_table):
     cur_battery_level = int(state.battery_charge / BATTERY_SCALAR)
     best = float("-inf")
     for delta_battery_level in range(-cur_battery_level, parameters.NUM_BATTERY_CAPACITY_BINS - cur_battery_level):
-        cur_score = v_table[(state.time + 1) % parameters.NUM_TIME_STEP_BINS][cur_battery_level + delta_battery_level]
+        cur_score = get_reward(state, delta_battery_level * BATTERY_SCALAR) + v_table[(state.time + 1) % parameters.NUM_TIME_STEP_BINS][cur_battery_level + delta_battery_level]
         if best < cur_score:
             best = cur_score
             action = delta_battery_level
@@ -127,37 +140,36 @@ def initialize_v_table():
     # Fill in final column of v_table
     for battery_level in range(parameters.NUM_BATTERY_CAPACITY_BINS):
         print("Battery Level Bins:",battery_level * BATTERY_SCALAR)
-        v_table[parameters.NUM_TIME_STEP_BINS - 1][battery_level] = gain_changer(state, battery_level * BATTERY_SCALAR)
-    print(v_table[parameters.NUM_TIME_STEP_BINS-1])
+        v_table[parameters.NUM_TIME_STEP_BINS - 1][battery_level] = get_reward(state, -battery_level * BATTERY_SCALAR)
     
     # Fill v_table
     delta = float("inf")
     while delta > parameters.MIN_ACCEPTABLE_DELTA:
         delta = 0
         for cur_time_bin in range(parameters.NUM_TIME_STEP_BINS - 2, -1 , -1):
-            # print("cur_time_bin: ", cur_time_bin)
+            # Update State for current time
             state.time = cur_time_bin * parameters.TIME_STEP
             state.get_next_system_load(cur_time_bin)
             state.get_next_energy_gen()
+
+            # Loop through all battery states
             for cur_battery_level in range(parameters.NUM_BATTERY_CAPACITY_BINS):
+                state.battery_charge = cur_battery_level * BATTERY_SCALAR
                 v = v_table[cur_time_bin][cur_battery_level]
+
+                # Loop through all possible actions (empty battery to charge fully)
                 best = float("-inf")
                 for delta_battery_level in range(-cur_battery_level, parameters.NUM_BATTERY_CAPACITY_BINS - cur_battery_level):
-                    #print("Action:", delta_battery_level, " Battery Level:", cur_battery_level," Max Capacity:", parameters.MAX_BATTERY_CAPACITY)
-                    state.battery_charge = (cur_battery_level + delta_battery_level) * BATTERY_SCALAR
+                    print("\nBatt:", cur_battery_level, "Action:", delta_battery_level, "Reward:", get_reward(state, delta_battery_level * BATTERY_SCALAR), "Next State Value:", v_table[cur_time_bin + 1][cur_battery_level + delta_battery_level])
                     best = max(best, get_reward(state, delta_battery_level * BATTERY_SCALAR) + v_table[cur_time_bin + 1][cur_battery_level + delta_battery_level])
-                #print("v:",v,"   best:",best,"   v - best =",v-best)
                 delta = max(delta, abs(v - best))
-                # print(delta) # This is much greater than the parameter one, looping through the while loop and getting bigger.
                 v_table[cur_time_bin][cur_battery_level] = best
-        print(delta)
     
     return v_table
 
 def simulate_time_step(state, action):
-    flux = state.get_difference_battery_level(action)
+    state.net_gain += get_reward(state, action)
     state.change_battery_level(action)
-    state.net_gain += gain_changer(state, flux) + get_battery_wear(action - flux)
 
     # Increment max_load
     # Decrement net_gain
@@ -168,13 +180,14 @@ def simulate_time_step(state, action):
 if __name__ == "__main__":
     cur_state = State(True)
     cur_action = 3
-    print("I am printing something")
+    num_days_to_simulate = 3 * parameters.NUM_TIME_STEP_BINS
     v_table = initialize_v_table()
-    print('done with v_table')
 
+    print("--- V_Table ---")
     for i, time_bin in enumerate(v_table):
         print(i)
         print(time_bin)
+    print("-------------")
 
     times = []
     energy_gens = []
@@ -189,20 +202,23 @@ if __name__ == "__main__":
     gains.append(cur_state.net_gain)
     # print("Time: ",cur_state.time,"  Energy: ",cur_state.cur_energy_gen,"   Load: ", cur_state.cur_load,"  Charge in Battery: ", cur_state.battery_charge)
     
-    for i in range(72):
-        simulate_time_step(cur_state, cur_action)
-        cur_action = arg_max(cur_state, v_table)
-
-        times.append(cur_state.time)
+    for i in range(num_days_to_simulate):
+        print("\nTime:", parameters.TIME_STEP * i, "  cur_time:", cur_state.time, "  Net Score:", cur_state.net_gain)
+        print("Load:", cur_state.cur_load, "  Energy Gen:", cur_state.cur_energy_gen, "  Batt:", cur_state.battery_charge)
+        times.append(parameters.TIME_STEP * i)
         energy_gens.append(cur_state.cur_energy_gen)
         loads.append(cur_state.cur_load)
         battery_charges.append(cur_state.battery_charge)
         gains.append(cur_state.net_gain)
+
+        cur_action = arg_max(cur_state, v_table)
+        print("Action:", cur_action)
+        simulate_time_step(cur_state, cur_action)
    
-    plt.plot(energy_gens, label = 'Energy gen')
-    plt.plot(loads, label = 'Load')
-    plt.plot(battery_charges, label = 'Battery charge')
-    #plt.plot(gains, label = 'Net gain/loss')
+    plt.plot(times, energy_gens, label = 'Energy gen')
+    plt.plot(times, loads, label = 'Load')
+    plt.plot(times, battery_charges, label = 'Battery charge')
+    plt.plot(times, gains, label = 'Net gain/loss')
     plt.ylabel("Watt")
     plt.xlabel("Hours")
     plt.legend()
