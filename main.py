@@ -54,6 +54,14 @@ class State:
         if (self.time > parameters.TIME_STEP * parameters.NUM_TIME_STEP_BINS):
             self.time -= parameters.TIME_STEP * parameters.NUM_TIME_STEP_BINS
 
+class plot_info:
+    def __init__(self):
+        self.time = []
+        self.battery_charges = []
+        self.loads = []
+        self.gains = []
+        self.energy_gens = []
+
 def get_energy_generated():
     #df = pandas.read_csv(parameters.SOLAR_GENERATION_FILE_LOCATION)
     row = 0
@@ -177,6 +185,23 @@ def simulate_time_step(state, action):
     state.get_next_energy_gen()
     state.get_next_system_load()
 
+def plot_results(info):
+    plt.figure(1)
+    plt.subplot(211)
+    plt.plot(info.time, info.energy_gens, label = 'Energy gen')
+    plt.plot(info.time, info.loads, label = 'Load')
+    plt.plot(info.time, info.battery_charges, label = 'Battery charge')
+    plt.ylabel("Watt Hours")
+    plt.xlabel("Hours")
+    plt.legend()
+
+    plt.subplot(212)
+    plt.plot(info.time, info.gains, label = 'Net gain/loss')
+    plt.ylabel("Net gain/loss ($)")
+    plt.xlabel("Hours")
+    plt.legend()
+    plt.show()  
+
 if __name__ == "__main__":
     cur_state = State(True)
     cur_action = 3
@@ -189,37 +214,27 @@ if __name__ == "__main__":
         print(time_bin)
     print("-------------")
 
-    times = []
-    energy_gens = []
-    loads = []
-    battery_charges = []
-    gains = []
+    graph_info = plot_info()
 
-    times.append(cur_state.time)
-    energy_gens.append(cur_state.cur_energy_gen)
-    loads.append(cur_state.cur_load)
-    battery_charges.append(cur_state.battery_charge)
-    gains.append(cur_state.net_gain)
+    graph_info.time.append(cur_state.time)
+    graph_info.energy_gens.append(cur_state.cur_energy_gen)
+    graph_info.loads.append(cur_state.cur_load)
+    graph_info.battery_charges.append(cur_state.battery_charge)
+    graph_info.gains.append(cur_state.net_gain)
     # print("Time: ",cur_state.time,"  Energy: ",cur_state.cur_energy_gen,"   Load: ", cur_state.cur_load,"  Charge in Battery: ", cur_state.battery_charge)
     
     for i in range(num_days_to_simulate):
         print("\nTime:", parameters.TIME_STEP * i, "  cur_time:", cur_state.time, "  Net Score:", cur_state.net_gain)
         print("Load:", cur_state.cur_load, "  Energy Gen:", cur_state.cur_energy_gen, "  Batt:", cur_state.battery_charge)
-        times.append(parameters.TIME_STEP * i)
-        energy_gens.append(cur_state.cur_energy_gen)
-        loads.append(cur_state.cur_load)
-        battery_charges.append(cur_state.battery_charge)
-        gains.append(cur_state.net_gain)
+        graph_info.time.append(parameters.TIME_STEP * i)
+        graph_info.energy_gens.append(cur_state.cur_energy_gen)
+        graph_info.loads.append(cur_state.cur_load)
+        graph_info.battery_charges.append(cur_state.battery_charge)
+        graph_info.gains.append(cur_state.net_gain)
 
         cur_action = arg_max(cur_state, v_table)
         print("Action:", cur_action)
         simulate_time_step(cur_state, cur_action)
    
-    plt.plot(times, energy_gens, label = 'Energy gen')
-    plt.plot(times, loads, label = 'Load')
-    plt.plot(times, battery_charges, label = 'Battery charge')
-    plt.plot(times, gains, label = 'Net gain/loss')
-    plt.ylabel("Watt")
-    plt.xlabel("Hours")
-    plt.legend()
-    plt.show()        
+    plot_results(graph_info)
+   
