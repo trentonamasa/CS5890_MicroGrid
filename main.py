@@ -147,7 +147,7 @@ def initialize_v_table():
     state.cur_load = 0
     # Fill in final column of v_table
     for battery_level in range(parameters.NUM_BATTERY_CAPACITY_BINS):
-        print("Battery Level Bins:",battery_level * BATTERY_SCALAR)
+        #print("Battery Level Bins:",battery_level * BATTERY_SCALAR)
         v_table[parameters.NUM_TIME_STEP_BINS - 1][battery_level] = get_reward(state, -battery_level * BATTERY_SCALAR)
     
     # Fill v_table
@@ -168,7 +168,7 @@ def initialize_v_table():
                 # Loop through all possible actions (empty battery to charge fully)
                 best = float("-inf")
                 for delta_battery_level in range(-cur_battery_level, parameters.NUM_BATTERY_CAPACITY_BINS - cur_battery_level):
-                    print("\nBatt:", cur_battery_level, "Action:", delta_battery_level, "Reward:", get_reward(state, delta_battery_level * BATTERY_SCALAR), "Next State Value:", v_table[cur_time_bin + 1][cur_battery_level + delta_battery_level])
+                    #print("\nBatt:", cur_battery_level, "Action:", delta_battery_level, "Reward:", get_reward(state, delta_battery_level * BATTERY_SCALAR), "Next State Value:", v_table[cur_time_bin + 1][cur_battery_level + delta_battery_level])
                     best = max(best, get_reward(state, delta_battery_level * BATTERY_SCALAR) + v_table[cur_time_bin + 1][cur_battery_level + delta_battery_level])
                 delta = max(delta, abs(v - best))
                 v_table[cur_time_bin][cur_battery_level] = best
@@ -184,6 +184,13 @@ def simulate_time_step(state, action):
     state.increment_time()
     state.get_next_energy_gen()
     state.get_next_system_load()
+
+def print_v_table(v_table):
+    print("--- V_Table ---")
+    for i, time_bin in enumerate(v_table):
+        print(i)
+        print(time_bin)
+    print("-------------")
 
 def plot_results(info):
     plt.figure(1)
@@ -208,12 +215,6 @@ if __name__ == "__main__":
     num_days_to_simulate = 3 * parameters.NUM_TIME_STEP_BINS
     v_table = initialize_v_table()
 
-    print("--- V_Table ---")
-    for i, time_bin in enumerate(v_table):
-        print(i)
-        print(time_bin)
-    print("-------------")
-
     graph_info = plot_info()
 
     graph_info.time.append(cur_state.time)
@@ -224,8 +225,8 @@ if __name__ == "__main__":
     # print("Time: ",cur_state.time,"  Energy: ",cur_state.cur_energy_gen,"   Load: ", cur_state.cur_load,"  Charge in Battery: ", cur_state.battery_charge)
     
     for i in range(num_days_to_simulate):
-        print("\nTime:", parameters.TIME_STEP * i, "  cur_time:", cur_state.time, "  Net Score:", cur_state.net_gain)
-        print("Load:", cur_state.cur_load, "  Energy Gen:", cur_state.cur_energy_gen, "  Batt:", cur_state.battery_charge)
+        #print("\nTime:", parameters.TIME_STEP * i, "  cur_time:", cur_state.time, "  Net Score:", cur_state.net_gain)
+        #print("Load:", cur_state.cur_load, "  Energy Gen:", cur_state.cur_energy_gen, "  Batt:", cur_state.battery_charge)
         graph_info.time.append(parameters.TIME_STEP * i)
         graph_info.energy_gens.append(cur_state.cur_energy_gen)
         graph_info.loads.append(cur_state.cur_load)
@@ -233,7 +234,7 @@ if __name__ == "__main__":
         graph_info.gains.append(cur_state.net_gain)
 
         cur_action = arg_max(cur_state, v_table)
-        print("Action:", cur_action)
+        #print("Action:", cur_action)
         simulate_time_step(cur_state, cur_action)
    
     plot_results(graph_info)
