@@ -135,6 +135,7 @@ def initialize_v_table():
     while delta > parameters.MIN_ACCEPTABLE_DELTA:
         delta = 0
         for cur_time_bin in range(parameters.NUM_TIME_STEP_BINS - 2, -1 , -1):
+            # print("cur_time_bin: ", cur_time_bin)
             state.time = cur_time_bin * parameters.TIME_STEP
             state.get_next_system_load()
             state.get_next_energy_gen()
@@ -142,11 +143,12 @@ def initialize_v_table():
                 v = v_table[cur_time_bin][cur_battery_level]
                 best = float("-inf")
                 for delta_battery_level in range(-cur_battery_level, parameters.NUM_BATTERY_CAPACITY_BINS - cur_battery_level):
-                    # print("Action:", delta_battery_level, " Battery Level:", cur_battery_level," Max Capacity:", parameters.MAX_BATTERY_CAPACITY)
+                    print("Action:", delta_battery_level, " Battery Level:", cur_battery_level," Max Capacity:", parameters.MAX_BATTERY_CAPACITY)
                     state.battery_charge = cur_battery_level + delta_battery_level
                     best = max(best, get_reward(state, delta_battery_level) + v_table[cur_time_bin + 1][cur_battery_level + delta_battery_level])
                 #print("v:",v,"   best:",best,"   v - best =",v-best)
                 delta = max(delta, abs(v - best))
+                # print(delta) # This is much greater than the parameter one, looping through the while loop and getting bigger.
                 v_table[cur_time_bin][cur_battery_level] = best
         print(delta)
     
