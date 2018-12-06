@@ -212,7 +212,7 @@ def plot_results(info):
 if __name__ == "__main__":
     cur_state = State(True)
     cur_action = 3
-    num_days_to_simulate = 30 * parameters.NUM_TIME_STEP_BINS
+    num_days_to_simulate = 3 * parameters.NUM_TIME_STEP_BINS
     v_table = initialize_v_table()
 
     graph_info = plot_info()

@@ -11,7 +11,7 @@ PEAK_TIME_END = 20
 # Cost in ____
 PEAK_TIME_COST = -0.65
 COST = -.10
-PEAK_TIME_SELL = 0.5
+PEAK_TIME_SELL = 0.50
 SELL = 0.08
 # Battery limits
 MAX_DISCHARGE = -10
