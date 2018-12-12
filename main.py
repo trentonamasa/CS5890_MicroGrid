@@ -93,7 +93,7 @@ def get_system_load(is_v_table_initializer = False):
         if cur_time_bin != None: row = cur_time_bin
         energy_generated = df.iloc[row, parameters.LOAD_COL_INDEX]
         row += 1
-        row %= 1000
+        row %= 24
         return energy_generated
     
     return get_load
@@ -216,42 +216,48 @@ def plot_results(info, title):
     plt.ylabel("Net gain/loss ($)")
     plt.xlabel("Hours")
     plt.legend()
-    plt.show()  
+    plt.show()
 
-def run_machine_learning():
-    cur_state = State(True)
-    cur_action = 3
-    num_days_to_simulate = 3 * parameters.NUM_TIME_STEP_BINS
-    v_table = initialize_v_table()
 
-    graph_info = plot_info()
+def plot_comparison(graph_ml_info, graph_select_info, graph_title):
+    plt.figure(1)
+    plt.title(graph_title)
+    plt.subplot(211)
+    plt.plot(graph_ml_info.time, graph_ml_info.energy_gens, label = 'Energy gen', color='g')
+    plt.plot(graph_select_info.time, graph_select_info.loads, label = 'Load', color='r')
+    plt.plot(graph_ml_info.time, graph_ml_info.battery_charges, label = 'ML Battery charge', color='b')
+    plt.plot(graph_select_info.time, graph_select_info.battery_charges, label = 'SELECT Battery charge', color='m')
+    plt.ylabel("Watts")
+    plt.xlabel("Hours")
+    plt.legend()
 
-    graph_info.time.append(cur_state.time)
-    graph_info.energy_gens.append(cur_state.cur_energy_gen)
-    graph_info.loads.append(cur_state.cur_load)
-    graph_info.battery_charges.append(cur_state.battery_charge)
-    graph_info.gains.append(cur_state.net_gain)
-    # print("Time: ",cur_state.time,"  Energy: ",cur_state.cur_energy_gen,"   Load: ", cur_state.cur_load,"  Charge in Battery: ", cur_state.battery_charge)
+    plt.subplot(212)
+    plt.plot(graph_ml_info.time, graph_ml_info.gains, label = 'ML Net gain/loss', color='b')
+    plt.plot(graph_select_info.time, graph_select_info.gains, label = 'SELECT Net gain/loss', color='m')
+    plt.ylabel("Net gain/loss ($)")
+    plt.xlabel("Hours")
+    plt.legend()
+    plt.show()
+
+
+def choose_action_method(use_machine_learning):
     
-    for i in range(num_days_to_simulate):
-        #print("\nTime:", parameters.TIME_STEP * i, "  cur_time:", cur_state.time, "  Net Score:", cur_state.net_gain)
-        #print("Load:", cur_state.cur_load, "  Energy Gen:", cur_state.cur_energy_gen, "  Batt:", cur_state.battery_charge)
-        graph_info.time.append(parameters.TIME_STEP * i)
-        graph_info.energy_gens.append(cur_state.cur_energy_gen)
-        graph_info.loads.append(cur_state.cur_load)
-        graph_info.battery_charges.append(cur_state.battery_charge)
-        graph_info.gains.append(cur_state.net_gain)
+    def get_machine_learning_action(cur_state):
+        nonlocal v_table
+        return arg_max(cur_state, v_table)
 
-        cur_action = arg_max(cur_state, v_table)
-        #print("Action:", cur_action)
-        simulate_time_step(cur_state, cur_action)
-   
-    # plot_results(graph_info, 'Machine Learning')
+    if use_machine_learning:
+        v_table = initialize_v_table()
+        return get_machine_learning_action
+    else:
+        return get_action_for_select_function
 
-def run_select_style():
+
+def run_simulation(num_days, use_machine_learning):
     cur_state = State(False)
     cur_action = 3
-    num_days_to_simulate = 3*parameters.NUM_TIME_STEP_BINS
+    num_days_to_simulate = num_days*parameters.NUM_TIME_STEP_BINS
+    get_action = choose_action_method(use_machine_learning)
 
     graph_info = plot_info()
 
@@ -271,15 +277,21 @@ def run_select_style():
         graph_info.battery_charges.append(cur_state.battery_charge)
         graph_info.gains.append(cur_state.net_gain)
 
-        cur_action = get_action_for_select_function(cur_state)
+        cur_action = get_action(cur_state)
         #print("Action:", cur_action)
         simulate_time_step(cur_state, cur_action)
    
-    plot_results(graph_info, 'SELECT Function')    
-
-
+    return graph_info
 
 if __name__ == "__main__":
-    run_machine_learning()
-    run_select_style()
+    num_days = 3
+    use_machine_learning = True
+    graph_ml_info = run_simulation(num_days, use_machine_learning)
+    use_machine_learning = False
+    graph_select_info = run_simulation(num_days, use_machine_learning)
+    #plot_results(graph_ml_info, 'ML Function')
+    #plot_results(graph_select_info, 'SELECT Function')
+
+    graph_title = str(num_days) + ' Day Simulation'
+    plot_comparison(graph_ml_info, graph_select_info, graph_title)
    
