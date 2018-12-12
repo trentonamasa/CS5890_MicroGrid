@@ -129,7 +129,6 @@ def arg_max(state, v_table):
         
     return action * BATTERY_SCALAR
 
-
 def initialize_v_table():
     v_table = []
     # Initialize v_table
@@ -192,15 +191,25 @@ def print_v_table(v_table):
         print(time_bin)
     print("-------------")
 
-def plot_results(info):
+def get_action_for_select_function(state):
+    if state.cur_load >= parameters.MAX_ACCEPTABLE_LOAD_FOR_SELECT and state.battery_charge > 0:
+        action = -state.battery_charge
+    elif (state.time < 23 or state.time < 5) and state.battery_charge < parameters.MAX_BATTERY_CAPACITY:
+        action = parameters.MAX_BATTERY_CAPACITY - state.battery_charge
+    else:
+        action = 0
+    return action
+
+def plot_results(info, title):
     plt.figure(1)
+    plt.title(title)
     plt.subplot(211)
     plt.plot(info.time, info.energy_gens, label = 'Energy gen')
     plt.plot(info.time, info.loads, label = 'Load')
-    plt.plot(info.time, info.battery_charges, label = 'Battery charge')
-    plt.ylabel("Watt Hours")
+    plt.ylabel("Watts")
     plt.xlabel("Hours")
     plt.legend()
+    plt.plot(info.time, info.battery_charges, label = 'Battery charge')
 
     plt.subplot(212)
     plt.plot(info.time, info.gains, label = 'Net gain/loss')
@@ -209,7 +218,7 @@ def plot_results(info):
     plt.legend()
     plt.show()  
 
-if __name__ == "__main__":
+def run_machine_learning():
     cur_state = State(True)
     cur_action = 3
     num_days_to_simulate = 3 * parameters.NUM_TIME_STEP_BINS
@@ -237,5 +246,40 @@ if __name__ == "__main__":
         #print("Action:", cur_action)
         simulate_time_step(cur_state, cur_action)
    
-    plot_results(graph_info)
+    # plot_results(graph_info, 'Machine Learning')
+
+def run_select_style():
+    cur_state = State(False)
+    cur_action = 3
+    num_days_to_simulate = 3*parameters.NUM_TIME_STEP_BINS
+
+    graph_info = plot_info()
+
+    graph_info.time.append(cur_state.time)
+    graph_info.energy_gens.append(cur_state.cur_energy_gen)
+    graph_info.loads.append(cur_state.cur_load)
+    graph_info.battery_charges.append(cur_state.battery_charge)
+    graph_info.gains.append(cur_state.net_gain)
+    # print("Time: ",cur_state.time,"  Energy: ",cur_state.cur_energy_gen,"   Load: ", cur_state.cur_load,"  Charge in Battery: ", cur_state.battery_charge)
+    
+    for i in range(num_days_to_simulate):
+        #print("\nTime:", parameters.TIME_STEP * i, "  cur_time:", cur_state.time, "  Net Score:", cur_state.net_gain)
+        #print("Load:", cur_state.cur_load, "  Energy Gen:", cur_state.cur_energy_gen, "  Batt:", cur_state.battery_charge)
+        graph_info.time.append(parameters.TIME_STEP * i)
+        graph_info.energy_gens.append(cur_state.cur_energy_gen)
+        graph_info.loads.append(cur_state.cur_load)
+        graph_info.battery_charges.append(cur_state.battery_charge)
+        graph_info.gains.append(cur_state.net_gain)
+
+        cur_action = get_action_for_select_function(cur_state)
+        #print("Action:", cur_action)
+        simulate_time_step(cur_state, cur_action)
+   
+    plot_results(graph_info, 'SELECT Function')    
+
+
+
+if __name__ == "__main__":
+    run_machine_learning()
+    run_select_style()
    

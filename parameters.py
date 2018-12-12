@@ -21,3 +21,5 @@ NUM_BATTERY_CAPACITY_BINS = 14
 # TODO Max load parameters
 # V Table
 MIN_ACCEPTABLE_DELTA = .5
+# parameters for SELECT function
+MAX_ACCEPTABLE_LOAD_FOR_SELECT = 5000 # kW
