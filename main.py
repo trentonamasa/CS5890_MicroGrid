@@ -220,6 +220,7 @@ def plot_results(info, title):
 
 
 def plot_comparison(graph_ml_info, graph_select_info, graph_title):
+    plt.rcParams.update({'font.size': 20})
     plt.figure(1)
     plt.title(graph_title)
     plt.subplot(211)
