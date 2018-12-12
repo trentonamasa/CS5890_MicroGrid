@@ -277,8 +277,6 @@ def run_select_style():
    
     plot_results(graph_info, 'SELECT Function')    
 
-
-
 if __name__ == "__main__":
     run_machine_learning()
     run_select_style()
