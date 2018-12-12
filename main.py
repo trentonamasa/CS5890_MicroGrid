@@ -192,10 +192,10 @@ def print_v_table(v_table):
     print("-------------")
 
 def get_action_for_select_function(state):
-    if state.cur_load >= parameters.MAX_ACCEPTABLE_LOAD_FOR_SELECT and state.battery_charge > 0:
-        action = -state.battery_charge
+    if state.cur_load >= parameters.MAX_ACCEPTABLE_LOAD_FOR_SELECT:
+        action = -min(state.cur_load - parameters.MAX_ACCEPTABLE_LOAD_FOR_SELECT, state.battery_charge)
     elif (state.time < 23 or state.time < 5) and state.battery_charge < parameters.MAX_BATTERY_CAPACITY:
-        action = parameters.MAX_BATTERY_CAPACITY - state.battery_charge
+        action = (parameters.MAX_BATTERY_CAPACITY - state.battery_charge) / 6
     else:
         action = 0
     return action
