@@ -4,6 +4,7 @@ from enum import Enum
 import pandas
 import math
 import matplotlib.pyplot as plt
+import random
 
 BATTERY_SCALAR = parameters.MAX_BATTERY_CAPACITY / parameters.NUM_BATTERY_CAPACITY_BINS
 
@@ -65,11 +66,25 @@ class plot_info:
 def get_energy_generated():
     #df = pandas.read_csv(parameters.SOLAR_GENERATION_FILE_LOCATION)
     row = 0
+    cloud_ahoy = False
+    cloud_timer = parameters.TIME_STEP * random.randint(0, 3)
 
     def get_energy(time):
+        nonlocal cloud_ahoy
+        nonlocal cloud_timer
         begin_solar_gen_time = 11
         end_solar_gen_time = 18
-        scalar = 8
+        if cloud_ahoy: 
+            scalar = random.randint(700, 900)/600
+            cloud_timer -= 1
+            if cloud_timer == 0:
+                cloud_ahoy = False
+                cloud_timer = parameters.TIME_STEP * random.randint(0, 4)
+        else:
+            scalar = random.randint(700, 900)/100
+            if random.randint(0, 50) / 50 == 1: cloud_ahoy = True
+            print(cloud_ahoy)
+
         if (time > begin_solar_gen_time and time < end_solar_gen_time):
             return math.sin((time - begin_solar_gen_time) * math.pi / (end_solar_gen_time - begin_solar_gen_time)) * scalar
         return 0
@@ -90,11 +105,14 @@ def get_system_load(is_v_table_initializer = False):
 
     def get_load(cur_time_bin = None):
         nonlocal row
+        nonlocal is_v_table_initializer
         if cur_time_bin != None: row = cur_time_bin
         energy_generated = df.iloc[row, parameters.LOAD_COL_INDEX]
         row += 1
         row %= 24
-        return energy_generated
+        if is_v_table_initializer == False: offset = random.randint(0, 100)/100
+        else: offset = 0
+        return energy_generated + offset
     
     return get_load
 
