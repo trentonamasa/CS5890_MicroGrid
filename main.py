@@ -69,7 +69,7 @@ def get_energy_generated():
     def get_energy(time):
         begin_solar_gen_time = 11
         end_solar_gen_time = 18
-        scalar = 13000
+        scalar = 8
         if (time > begin_solar_gen_time and time < end_solar_gen_time):
             return math.sin((time - begin_solar_gen_time) * math.pi / (end_solar_gen_time - begin_solar_gen_time)) * scalar
         return 0
@@ -99,7 +99,7 @@ def get_system_load(is_v_table_initializer = False):
     return get_load
 
 def get_battery_wear(delta_energy):
-    return -abs((delta_energy/BATTERY_SCALAR)**2) # TODO Replace this function with the real one from Select
+    return -abs((delta_energy/BATTERY_SCALAR)**2/1000) # TODO Replace this function with the real one from Select
 
 def get_reward(state, action):
     buy_sell = state.get_difference_battery_level(action)
@@ -206,7 +206,7 @@ def plot_results(info, title):
     plt.subplot(211)
     plt.plot(info.time, info.energy_gens, label = 'Energy gen')
     plt.plot(info.time, info.loads, label = 'Load')
-    plt.ylabel("Watts")
+    plt.ylabel("Kilowatts")
     plt.xlabel("Hours")
     plt.legend()
     plt.plot(info.time, info.battery_charges, label = 'Battery charge')
@@ -223,21 +223,21 @@ def plot_comparison(graph_ml_info, graph_select_info, graph_title):
     plt.rcParams.update({'font.size': 20})
     plt.figure(1)
     plt.title(graph_title)
-    # plt.subplot(211)
+    plt.subplot(211)
     plt.plot(graph_ml_info.time, graph_ml_info.energy_gens, label = 'Energy gen', color='g')
     plt.plot(graph_select_info.time, graph_select_info.loads, label = 'Load', color='r')
     plt.plot(graph_ml_info.time, graph_ml_info.battery_charges, label = 'ML Battery charge', color='b')
     plt.plot(graph_select_info.time, graph_select_info.battery_charges, label = 'SELECT Battery charge', color='m')
-    plt.ylabel("Watts")
+    plt.ylabel("Kilowatts")
     plt.xlabel("Hours")
-    # plt.legend()
+    plt.legend()
 
-    # plt.subplot(212)
-    # plt.plot(graph_ml_info.time, graph_ml_info.gains, label = 'ML Net gain/loss', color='b')
-    # plt.plot(graph_select_info.time, graph_select_info.gains, label = 'SELECT Net gain/loss', color='m')
-    # plt.ylabel("Net gain/loss ($)")
-    # plt.xlabel("Hours")
-    # plt.legend()
+    plt.subplot(212)
+    plt.plot(graph_ml_info.time, graph_ml_info.gains, label = 'ML Net gain/loss', color='b')
+    plt.plot(graph_select_info.time, graph_select_info.gains, label = 'SELECT Net gain/loss', color='m')
+    plt.ylabel("Net gain/loss ($)")
+    plt.xlabel("Hours")
+    plt.legend()
     plt.show()
 
 
@@ -249,6 +249,7 @@ def choose_action_method(use_machine_learning):
 
     if use_machine_learning:
         v_table = initialize_v_table()
+        print_v_table(v_table)
         return get_machine_learning_action
     else:
         return get_action_for_select_function
