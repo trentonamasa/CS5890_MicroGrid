@@ -4,6 +4,7 @@ from enum import Enum
 import pandas
 import math
 import matplotlib.pyplot as plt
+import random
 
 BATTERY_SCALAR = parameters.MAX_BATTERY_CAPACITY / parameters.NUM_BATTERY_CAPACITY_BINS
 
@@ -65,11 +66,25 @@ class plot_info:
 def get_energy_generated():
     #df = pandas.read_csv(parameters.SOLAR_GENERATION_FILE_LOCATION)
     row = 0
+    cloud_ahoy = False
+    cloud_timer = parameters.TIME_STEP * random.randint(0, 3)
 
     def get_energy(time):
+        nonlocal cloud_ahoy
+        nonlocal cloud_timer
         begin_solar_gen_time = 11
         end_solar_gen_time = 18
-        scalar = 13000
+        if cloud_ahoy: 
+            scalar = random.randint(700, 900)/600
+            cloud_timer -= 1
+            if cloud_timer == 0:
+                cloud_ahoy = False
+                cloud_timer = parameters.TIME_STEP * random.randint(0, 4)
+        else:
+            scalar = random.randint(700, 900)/100
+            if random.randint(0, 50) / 50 == 1: cloud_ahoy = True
+            print(cloud_ahoy)
+
         if (time > begin_solar_gen_time and time < end_solar_gen_time):
             return math.sin((time - begin_solar_gen_time) * math.pi / (end_solar_gen_time - begin_solar_gen_time)) * scalar
         return 0
@@ -90,16 +105,19 @@ def get_system_load(is_v_table_initializer = False):
 
     def get_load(cur_time_bin = None):
         nonlocal row
+        nonlocal is_v_table_initializer
         if cur_time_bin != None: row = cur_time_bin
         energy_generated = df.iloc[row, parameters.LOAD_COL_INDEX]
         row += 1
         row %= 24
-        return energy_generated
+        if is_v_table_initializer == False: offset = random.randint(0, 100)/100
+        else: offset = 0
+        return energy_generated + offset
     
     return get_load
 
 def get_battery_wear(delta_energy):
-    return -abs((delta_energy/BATTERY_SCALAR)**2) # TODO Replace this function with the real one from Select
+    return -abs((delta_energy/BATTERY_SCALAR)**2/1000) # TODO Replace this function with the real one from Select
 
 def get_reward(state, action):
     buy_sell = state.get_difference_battery_level(action)
@@ -206,7 +224,7 @@ def plot_results(info, title):
     plt.subplot(211)
     plt.plot(info.time, info.energy_gens, label = 'Energy gen')
     plt.plot(info.time, info.loads, label = 'Load')
-    plt.ylabel("Watts")
+    plt.ylabel("Kilowatts")
     plt.xlabel("Hours")
     plt.legend()
     plt.plot(info.time, info.battery_charges, label = 'Battery charge')
@@ -223,21 +241,21 @@ def plot_comparison(graph_ml_info, graph_select_info, graph_title):
     plt.rcParams.update({'font.size': 20})
     plt.figure(1)
     plt.title(graph_title)
-    # plt.subplot(211)
+    plt.subplot(211)
     plt.plot(graph_ml_info.time, graph_ml_info.energy_gens, label = 'Energy gen', color='g')
     plt.plot(graph_select_info.time, graph_select_info.loads, label = 'Load', color='r')
     plt.plot(graph_ml_info.time, graph_ml_info.battery_charges, label = 'ML Battery charge', color='b')
     plt.plot(graph_select_info.time, graph_select_info.battery_charges, label = 'SELECT Battery charge', color='m')
-    plt.ylabel("Watts")
+    plt.ylabel("Kilowatts")
     plt.xlabel("Hours")
-    # plt.legend()
+    plt.legend()
 
-    # plt.subplot(212)
-    # plt.plot(graph_ml_info.time, graph_ml_info.gains, label = 'ML Net gain/loss', color='b')
-    # plt.plot(graph_select_info.time, graph_select_info.gains, label = 'SELECT Net gain/loss', color='m')
-    # plt.ylabel("Net gain/loss ($)")
-    # plt.xlabel("Hours")
-    # plt.legend()
+    plt.subplot(212)
+    plt.plot(graph_ml_info.time, graph_ml_info.gains, label = 'ML Net gain/loss', color='b')
+    plt.plot(graph_select_info.time, graph_select_info.gains, label = 'SELECT Net gain/loss', color='m')
+    plt.ylabel("Net gain/loss ($)")
+    plt.xlabel("Hours")
+    plt.legend()
     plt.show()
 
 
@@ -249,6 +267,7 @@ def choose_action_method(use_machine_learning):
 
     if use_machine_learning:
         v_table = initialize_v_table()
+        print_v_table(v_table)
         return get_machine_learning_action
     else:
         return get_action_for_select_function
