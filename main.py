@@ -212,8 +212,8 @@ def print_v_table(v_table):
 def get_action_for_select_function(state):
     if state.cur_load >= parameters.MAX_ACCEPTABLE_LOAD_FOR_SELECT:
         action = -min(state.cur_load - parameters.MAX_ACCEPTABLE_LOAD_FOR_SELECT, state.battery_charge)
-    elif (state.time < 23 or state.time < 5) and state.battery_charge < parameters.MAX_BATTERY_CAPACITY:
-        action = (parameters.MAX_BATTERY_CAPACITY - state.battery_charge) / 6
+    elif (state.time > 23 or state.time < 5) and state.battery_charge < parameters.MAX_BATTERY_CAPACITY:
+        action = state.cur_load + parameters.MAX_BATTERY_CAPACITY / 6
     else:
         action = 0
     return action
@@ -244,18 +244,24 @@ def plot_comparison(graph_ml_info, graph_select_info, graph_title):
     plt.subplot(211)
     plt.plot(graph_ml_info.time, graph_ml_info.energy_gens, label = 'Energy gen', color='g')
     plt.plot(graph_select_info.time, graph_select_info.loads, label = 'Load', color='r')
-    plt.plot(graph_ml_info.time, graph_ml_info.battery_charges, label = 'ML Battery charge', color='b')
-    plt.plot(graph_select_info.time, graph_select_info.battery_charges, label = 'SELECT Battery charge', color='m')
     plt.ylabel("Kilowatts")
-    plt.xlabel("Hours")
     plt.legend()
 
     plt.subplot(212)
+    plt.plot(graph_ml_info.time, graph_ml_info.battery_charges, label = 'ML Battery charge', color='b')
+    plt.plot(graph_select_info.time, graph_select_info.battery_charges, label = 'SELECT Battery charge', color='m')
+    plt.ylabel("Kilowatt/Hours")
+    plt.xlabel("Hours")
+    plt.legend()
+
+    plt.show()
+
     plt.plot(graph_ml_info.time, graph_ml_info.gains, label = 'ML Net gain/loss', color='b')
     plt.plot(graph_select_info.time, graph_select_info.gains, label = 'SELECT Net gain/loss', color='m')
     plt.ylabel("Net gain/loss ($)")
     plt.xlabel("Hours")
     plt.legend()
+
     plt.show()
 
 
