@@ -27,7 +27,7 @@ class State:
         self.max_battery_capacity = parameters.MAX_BATTERY_CAPACITY
         self.get_next_energy_gen()
         self.get_next_system_load()
-
+        
     def get_next_energy_gen(self):
         self.cur_energy_gen = self.__get_next_energy(self.time)
 
@@ -121,7 +121,9 @@ def get_battery_wear(delta_energy):
 
 def get_reward(state, action):
     buy_sell = state.get_difference_battery_level(action)
-    return gain_changer(state, action) + get_battery_wear(action - buy_sell.amount_to_buy - buy_sell.amount_to_sell)
+    battery_percent = (state.battery_charge/parameters.MAX_BATTERY_CAPACITY)
+    battery_percent_penalty = (0 if battery_percent > 20 else (0.2 - battery_percent))
+    return gain_changer(state, action) + get_battery_wear(action - buy_sell.amount_to_buy - buy_sell.amount_to_sell) - battery_percent_penalty
 
 def gain_changer(state, action):
     buy_sell = Buy_Sell_Amount()
@@ -212,7 +214,7 @@ def print_v_table(v_table):
 def get_action_for_select_function(state):
     if state.cur_load >= parameters.MAX_ACCEPTABLE_LOAD_FOR_SELECT:
         action = -min(state.cur_load - parameters.MAX_ACCEPTABLE_LOAD_FOR_SELECT, state.battery_charge)
-    elif (state.time < 23 or state.time < 5) and state.battery_charge < parameters.MAX_BATTERY_CAPACITY:
+    elif (state.time > 23 or state.time < 5) and state.battery_charge < parameters.MAX_BATTERY_CAPACITY:
         action = (parameters.MAX_BATTERY_CAPACITY - state.battery_charge) / 6
     else:
         action = 0
